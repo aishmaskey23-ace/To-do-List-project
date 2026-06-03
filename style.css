@@ -1,0 +1,172 @@
+/* ---------- GENERAL ---------- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Poppins", sans-serif;
+}
+
+body {
+    background: #f4f4f4;
+    transition: 0.3s;
+}
+
+body.dark {
+    background: #1a1a1a;
+    color: white;
+}
+
+/* ---------- CONTAINER ---------- */
+.container {
+    width: 450px;
+    background: white;
+    margin: 50px auto;
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: 0 0 25px rgba(0,0,0,0.1);
+}
+
+body.dark .container {
+    background: #2c2c2c;
+}
+
+/* ---------- TOP BAR ---------- */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.mode-toggle {
+    cursor: pointer;
+    font-size: 22px;
+}
+
+/* ---------- INPUT AREA ---------- */
+.input-section {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+#taskInput {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
+#addBtn {
+    padding: 12px 18px;
+    border: none;
+    background: var(--theme);
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* ---------- SEARCH & FILTER ---------- */
+.search-filter {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+}
+
+#searchInput, #filterSelect {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
+/* ---------- TASK LIST ---------- */
+#taskList {
+    margin-top: 25px;
+}
+
+.task {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background: #f9f9f9;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    cursor: grab;
+    transition: 0.2s;
+}
+
+body.dark .task {
+    background: #3b3b3b;
+}
+
+.task.completed span {
+    text-decoration: line-through;
+    color: gray;
+}
+
+.checkbox {
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--theme);
+    border-radius: 5px;
+    margin-right: 12px;
+    cursor: pointer;
+    position: relative;
+    transition: 0.2s;
+}
+
+.checkbox.checked {
+    background: var(--theme);
+}
+
+.checkbox.checked::after {
+    content: "✔";
+    color: white;
+    position: absolute;
+    top: -2px;
+    left: 4px;
+    font-size: 16px;
+}
+
+/* ---------- BUTTONS ---------- */
+.task-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.edit-btn, .delete-btn {
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+
+.edit-btn {
+    background: #e67e22;
+}
+
+.delete-btn {
+    background: #c0392b;
+}
+
+/* ---------- DRAG ACTIVE ---------- */
+.task.dragging {
+    opacity: 0.4;
+}
+
+/* ---------- THEMES ---------- */
+:root {
+    --theme: #3498db; /* default blue */
+}
+
+body.purple { --theme: #9b59b6; }
+body.green {  --theme: #2ecc71; }
+body.orange { --theme: #e67e22; }
+body.pink {   --theme: #e84393; }
+
+/* RESPONSIVE */
+@media (max-width: 500px) {
+    .container { width: 90%; }
+}
