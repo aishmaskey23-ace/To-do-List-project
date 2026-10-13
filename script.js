@@ -5,12 +5,33 @@ const searchInput = document.getElementById("searchInput");
 const filterSelect = document.getElementById("filterSelect");
 const themeSelect = document.getElementById("themeSelect");
 
-let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+/* -------- LOAD SAVED DATA -------- */
+function loadTasks() {
+    try {
+        const saved = JSON.parse(localStorage.getItem("tasks"));
+        if (!Array.isArray(saved)) return [];
+        // give every task a unique id (also upgrades tasks saved by the old version)
+        return saved.map((t, i) => ({
+            id: t.id || Date.now() + i,
+            text: t.text,
+            completed: !!t.completed
+        }));
+    } catch (e) {
+        return [];
+    }
+}
+
+let tasks = loadTasks();
 let darkMode = localStorage.getItem("darkMode") === "true";
 let selectedTheme = localStorage.getItem("theme") || "blue";
 
+function saveTasks() {
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+}
+
 /* ---------- APPLY THEME ----------- */
 document.body.classList.add(selectedTheme);
+themeSelect.value = selectedTheme;   // dropdown now matches the saved theme
 
 /* -------- DARK MODE -------- */
 if (darkMode) document.body.classList.add("dark");
@@ -23,7 +44,7 @@ function toggleDarkMode() {
 
 /* -------- CHANGE THEME -------- */
 function changeTheme() {
-    document.body.classList.remove("blue","purple","green","orange","pink");
+    document.body.classList.remove("blue", "purple", "green", "orange", "pink");
     document.body.classList.add(themeSelect.value);
     selectedTheme = themeSelect.value;
     localStorage.setItem("theme", selectedTheme);
@@ -33,24 +54,53 @@ function changeTheme() {
 function displayTasks() {
     taskList.innerHTML = "";
 
-    tasks.forEach((task, index) => {
-        
+    const searchText = searchInput.value.trim().toLowerCase();
+    const filter = filterSelect.value;
+    const isFiltering = searchText !== "" || filter !== "all";
+
+    tasks.forEach(task => {
+        // search and filter are both applied here, so they work together
+        if (!task.text.toLowerCase().includes(searchText)) return;
+        if (filter === "completed" && !task.completed) return;
+        if (filter === "pending" && task.completed) return;
+
         const li = document.createElement("li");
         li.className = "task";
-        li.draggable = true;
-
-        li.innerHTML = `
-            <div style="display:flex; align-items:center;">
-                <div class="checkbox ${task.completed ? "checked" : ""}" onclick="toggleComplete(${index})"></div>
-                <span>${task.text}</span>
-            </div>
-            <div class="task-buttons">
-                <button class="edit-btn" onclick="editTask(${index})">Edit</button>
-                <button class="delete-btn" onclick="deleteTask(${index})">Delete</button>
-            </div>
-        `;
-
+        li.dataset.id = task.id;
+        li.draggable = !isFiltering;   // reorder only when the full list is visible
         if (task.completed) li.classList.add("completed");
+
+        // left side: checkbox + text
+        const left = document.createElement("div");
+        left.style.display = "flex";
+        left.style.alignItems = "center";
+
+        const checkbox = document.createElement("div");
+        checkbox.className = "checkbox" + (task.completed ? " checked" : "");
+
+        const span = document.createElement("span");
+        span.textContent = task.text;   // textContent = safe from script injection
+
+        left.appendChild(checkbox);
+        left.appendChild(span);
+
+        // right side: buttons
+        const buttons = document.createElement("div");
+        buttons.className = "task-buttons";
+
+        const editBtn = document.createElement("button");
+        editBtn.className = "edit-btn";
+        editBtn.textContent = "Edit";
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "delete-btn";
+        deleteBtn.textContent = "Delete";
+
+        buttons.appendChild(editBtn);
+        buttons.appendChild(deleteBtn);
+
+        li.appendChild(left);
+        li.appendChild(buttons);
 
         /* drag events */
         li.addEventListener("dragstart", () => li.classList.add("dragging"));
@@ -61,68 +111,81 @@ function displayTasks() {
 
         taskList.appendChild(li);
     });
-
-    localStorage.setItem("tasks", JSON.stringify(tasks));
 }
 
 /* -------- ADD TASK -------- */
-addBtn.addEventListener("click", () => {
-    if (taskInput.value.trim() === "") return alert("Enter a task!");
+function addTask() {
+    const text = taskInput.value.trim();
+    if (text === "") return alert("Enter a task!");
 
-    tasks.push({ text: taskInput.value, completed: false });
+    tasks.push({ id: Date.now(), text: text, completed: false });
     taskInput.value = "";
+    saveTasks();
     displayTasks();
+}
+
+addBtn.addEventListener("click", addTask);
+
+// pressing Enter also adds the task
+taskInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") addTask();
+});
+
+/* -------- BUTTON CLICKS (checkbox, edit, delete) -------- */
+taskList.addEventListener("click", e => {
+    const li = e.target.closest(".task");
+    if (!li) return;
+    const id = Number(li.dataset.id);
+
+    if (e.target.classList.contains("checkbox")) toggleComplete(id);
+    else if (e.target.classList.contains("edit-btn")) editTask(id);
+    else if (e.target.classList.contains("delete-btn")) deleteTask(id);
 });
 
 /* -------- COMPLETE TASK -------- */
-function toggleComplete(i) {
-    tasks[i].completed = !tasks[i].completed;
+function toggleComplete(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    task.completed = !task.completed;
+    saveTasks();
     displayTasks();
 }
 
 /* -------- EDIT -------- */
-function editTask(i) {
-    let newText = prompt("Edit task:", tasks[i].text);
-    if (newText) {
-        tasks[i].text = newText;
+function editTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
+    const newText = prompt("Edit task:", task.text);
+    if (newText !== null && newText.trim() !== "") {
+        task.text = newText.trim();
+        saveTasks();
         displayTasks();
     }
 }
 
 /* -------- DELETE -------- */
-function deleteTask(i) {
-    tasks.splice(i, 1);
+function deleteTask(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    saveTasks();
     displayTasks();
 }
 
-/* -------- SEARCH -------- */
+/* -------- SEARCH & FILTER -------- */
+// both just redraw the list, and displayTasks() applies both together
 function searchTasks() {
-    const text = searchInput.value.toLowerCase();
-
-    document.querySelectorAll(".task").forEach(task => {
-        const t = task.innerText.toLowerCase();
-        task.style.display = t.includes(text) ? "flex" : "none";
-    });
+    displayTasks();
 }
 
-/* -------- FILTER -------- */
 function filterTasks() {
-    const filter = filterSelect.value;
-
-    document.querySelectorAll(".task").forEach((task, i) => {
-        if (filter === "completed" && !tasks[i].completed)
-            task.style.display = "none";
-        else if (filter === "pending" && tasks[i].completed)
-            task.style.display = "none";
-        else
-            task.style.display = "flex";
-    });
+    displayTasks();
 }
 
 /* ---------- DRAG & DROP SORTING ---------- */
 taskList.addEventListener("dragover", e => {
     e.preventDefault();
     const dragging = document.querySelector(".dragging");
+    if (!dragging) return;
     const afterElement = getDragAfterElement(taskList, e.clientY);
     if (afterElement == null) taskList.appendChild(dragging);
     else taskList.insertBefore(dragging, afterElement);
@@ -142,16 +205,15 @@ function getDragAfterElement(list, y) {
     }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
-/* Save order after dragging */
+/* Save order after dragging (matched by id, so duplicate names are safe) */
 function saveOrder() {
     const newTasks = [];
-    document.querySelectorAll(".task span").forEach(span => {
-        const text = span.innerText;
-        const original = tasks.find(t => t.text === text);
-        newTasks.push(original);
+    document.querySelectorAll(".task").forEach(li => {
+        const original = tasks.find(t => t.id === Number(li.dataset.id));
+        if (original) newTasks.push(original);
     });
     tasks = newTasks;
-    localStorage.setItem("tasks", JSON.stringify(tasks));
+    saveTasks();
 }
 
 /* initialize */
